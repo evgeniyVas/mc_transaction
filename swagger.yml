@@ -1,0 +1,65 @@
+swagger: "2.0"
+info:
+  title: Example
+  version: 0.0.1
+schemes:
+  - http
+basePath: /
+consumes:
+  - application/json
+produces:
+  - application/json
+
+paths:
+  /v1/transaction/create:
+    post:
+      parameters:
+        - in: header
+          name: X-Idempodency-Token
+          type: string
+          format: uuid
+          required: true
+        - in: body
+          name: body
+          schema:
+            $ref: '#/definitions/ParamsBody'
+      responses:
+        '200':
+          description: ОК
+          schema:
+            $ref: '#/definitions/Transaction'
+        '400':
+          description: Ошибка клиента
+        '500':
+          description: Internal error
+          schema:
+            $ref: '#/definitions/Error'
+
+definitions:
+  Error:
+    type: object
+    required:
+      - message
+      - code
+    description: сообщение об ошибке
+    properties:
+      message:
+        type: string
+        x-nullable: false
+      code:
+        type: integer
+        x-nullable: false
+
+  ParamsBody:
+    type: object
+    properties:
+      amount:
+        type: number
+
+  Transaction:
+    type: object
+    properties:
+      id:
+        type: integer
+      pay_link:
+        type: string

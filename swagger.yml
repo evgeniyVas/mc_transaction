@@ -19,10 +19,14 @@ paths:
           type: string
           format: uuid
           required: true
+        - in : header
+          name: X-User-ID
+          type: integer
+          required: true
         - in: body
           name: body
           schema:
-            $ref: '#/definitions/ParamsBody'
+            $ref: '#/definitions/TransactionParamsBody'
       responses:
         '200':
           description: ОК
@@ -50,7 +54,7 @@ definitions:
         type: integer
         x-nullable: false
 
-  ParamsBody:
+  TransactionParamsBody:
     type: object
     properties:
       amount:

@@ -1,4 +1,4 @@
-package app
+package config
 
 import (
 	"time"
@@ -7,7 +7,14 @@ import (
 )
 
 type Config struct {
-	Postgres *Postgres
+	Postgres   *Postgres
+	HttpServer *HttpServer
+}
+
+type HttpServer struct {
+	Port         string
+	ReadTimeout  time.Duration
+	WriteTimeout time.Duration
 }
 
 type Postgres struct {

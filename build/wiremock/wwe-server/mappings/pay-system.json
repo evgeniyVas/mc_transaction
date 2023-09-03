@@ -1,0 +1,10 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/api/v1/payment/status"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "pay-system.json"
+  }
+}

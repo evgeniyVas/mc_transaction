@@ -2,23 +2,66 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"github.com/mc_transaction/internal/app"
+	"errors"
+	"github.com/mc_transaction/internal/config"
+	"github.com/mc_transaction/internal/logger"
+	"github.com/mc_transaction/internal/service"
+	storage "github.com/mc_transaction/internal/storage/psql"
+
+	"github.com/mc_transaction/internal/transport"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+)
+
+const (
+	ServiceName = "mc_transaction"
 )
 
 func main() {
-	a, err := app.New()
+	cfg, err := config.NewConfig(ServiceName)
 	if err != nil {
-		panic(fmt.Sprintf("не удалось инициализировать приложение error: (%v)", err.Error()))
+		panic("config initialization error: " + err.Error())
 	}
 
-	go a.Start()
-	defer a.Stop(context.Background())
+	logger.NewLogger()
+
+	storages, err := storage.New(
+		cfg.Postgres.Dsn,
+		cfg.Postgres.PingTimeout,
+	)
+	if err != nil {
+		panic("storage initialization error: " + err.Error())
+	}
+
+	services := service.NewServices(storages)
+	handler := transport.NewHandler(services)
+	server := transport.NewServer(cfg, handler.InitRouter())
+
+	go func() {
+		if err := server.Run(); !errors.Is(err, http.ErrServerClosed) {
+			panic("error occurred while running http server: " + err.Error())
+		}
+	}()
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig
+
+	const timeout = 5 * time.Second
+
+	ctx, shutdown := context.WithTimeout(context.Background(), timeout)
+	defer shutdown()
+
+	err = server.Stop(ctx)
+	if err != nil {
+		logger.Error("failed to stop server:" + err.Error())
+	}
+
+	err = storages.Close()
+	if err != nil {
+		logger.Error("failed to close storage:" + err.Error())
+	}
 }

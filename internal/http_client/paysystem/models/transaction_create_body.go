@@ -12,27 +12,27 @@ import (
 	"github.com/go-openapi/swag"
 )
 
-// ParamsBody params body
+// TransactionCreateBody transaction create body
 //
-// swagger:model ParamsBody
-type ParamsBody struct {
+// swagger:model TransactionCreateBody
+type TransactionCreateBody struct {
 
 	// amount
 	Amount float64 `json:"amount,omitempty"`
 }
 
-// Validate validates this params body
-func (m *ParamsBody) Validate(formats strfmt.Registry) error {
+// Validate validates this transaction create body
+func (m *TransactionCreateBody) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-// ContextValidate validates this params body based on context it is used
-func (m *ParamsBody) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validates this transaction create body based on context it is used
+func (m *TransactionCreateBody) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }
 
 // MarshalBinary interface implementation
-func (m *ParamsBody) MarshalBinary() ([]byte, error) {
+func (m *TransactionCreateBody) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -40,8 +40,8 @@ func (m *ParamsBody) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary interface implementation
-func (m *ParamsBody) UnmarshalBinary(b []byte) error {
-	var res ParamsBody
+func (m *TransactionCreateBody) UnmarshalBinary(b []byte) error {
+	var res TransactionCreateBody
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

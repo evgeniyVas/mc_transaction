@@ -2,6 +2,7 @@ package psql
 
 import (
 	"context"
+	"fmt"
 	"github.com/jmoiron/sqlx"
 	"time"
 )
@@ -25,6 +26,21 @@ type InsertTransactionParams struct {
 	UpdatedAt time.Time
 }
 
-func (s *TransactionStorage) CreateTransaction(ctx context.Context, fields *InsertTransactionParams) (int64, error) {
+func (t *TransactionStorage) CreateTransaction(ctx context.Context, p *InsertTransactionParams) (int64, error) {
+	var id int64
 
+	err := t.conn.GetContext(ctx, &id, queryInsertTransaction, p.UserId, p.Amount, p.Status, p.PayId, p.Locked, p.Token)
+	if err != nil {
+		return 0, fmt.Errorf("CreateTransaction.queryInsertTransaction error: %w", err)
+	}
+
+	return id, nil
+}
+
+func (t *TransactionStorage) SelectTransactionWithLock(ctx context.Context) (int64, error) {
+	return 1, nil
+}
+
+func (t *TransactionStorage) UpdateTransactionStatus(ctx context.Context) error {
+	return nil
 }

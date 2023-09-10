@@ -2,11 +2,12 @@ package service
 
 import (
 	"context"
+	"errors"
 	storage "github.com/mc_transaction/internal/storage/psql"
 )
 
 type BalanceStorage interface {
-	CreateBalance(ctx context.Context, fields *storage.InsertBalanceParams) int64
+	GetBalanceByUserID(ctx context.Context, fields *storage.SelectBalanceParams) error
 	UpdateBalance(ctx context.Context, fields *storage.UpdateBalanceParams) int64
 }
 
@@ -20,19 +21,25 @@ func NewBalance(storage BalanceStorage) *BalanceService {
 	}
 }
 
-type InsertBalanceParams struct {
-	Amount float64
-	UserId int
-}
+var ErrBalanceNotFound = errors.New("balance not found")
 
-func (t *BalanceService) CreateBalance(ctx context.Context, params InsertBalanceParams) {
-	// дергается из воркера, создает баланс если у пользователя еще его нет
+func (b *BalanceService) CheckBalanceByUserID(ctx context.Context, userId int64) error {
+	err := b.storage.GetBalanceByUserID(ctx, &storage.SelectBalanceParams{
+		UserId: userId,
+	})
+	if errors.Is(err, storage.ErrBalanceNotFound) {
+		return ErrBalanceNotFound
+	} else if err != nil {
+		return err
+	}
+	return nil
 }
 
 type UpdateBalanceParams struct {
 	Amount float64
+	UserId int64
 }
 
-func (t *BalanceService) UpdateBalance(ctx context.Context, params UpdateBalanceParams) {
+func (b *BalanceService) UpdateBalance(ctx context.Context, params UpdateBalanceParams) {
 	// дергается из воркера, обновляет баланс в случае статуса SUCCESS
 }

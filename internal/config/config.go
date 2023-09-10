@@ -1,14 +1,16 @@
 package config
 
 import (
+	"github.com/mc_transaction/internal/worker/transactionstatus"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
 )
 
 type Config struct {
-	Postgres   *Postgres
-	HttpServer *HttpServer
+	Postgres                *Postgres
+	HttpServer              *HttpServer
+	TransactionStatusWorker transactionstatus.Cfg
 }
 
 type HttpServer struct {

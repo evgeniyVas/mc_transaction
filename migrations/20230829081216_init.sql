@@ -1,18 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
 
--- users
-CREATE TABLE IF NOT EXISTS users
-(
-    id   BIGINT       NOT NULL UNIQUE,
-    name varchar(100) NULL,
-
-    primary key (id)
-);
-ALTER TABLE
-    users
-    OWNER TO user123;
-
 -- transactions
 CREATE TABLE IF NOT EXISTS transactions
 (
@@ -26,8 +14,7 @@ CREATE TABLE IF NOT EXISTS transactions
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 
-    primary key (id),
-    foreign key (user_id) references users (id)
+    primary key (id)
 );
 ALTER TABLE
     transactions
@@ -37,11 +24,10 @@ ALTER TABLE
 CREATE TABLE IF NOT EXISTS balance
 (
     id      BIGINT         NOT NULL UNIQUE,
-    user_id BIGINT         NOT NULL,
+    user_id BIGINT         NOT NULL UNIQUE,
     amount  DECIMAL(20, 2) NOT NULL,
 
-    primary key (id),
-    foreign key (user_id) references users (id)
+    primary key (id)
 );
 ALTER TABLE
     balance
@@ -53,5 +39,4 @@ ALTER TABLE
 -- +goose StatementBegin
 DROP TABLE IF EXISTS balance;
 DROP TABLE IF EXISTS transactions;
-DROP TABLE IF EXISTS users;
 -- +goose StatementEnd

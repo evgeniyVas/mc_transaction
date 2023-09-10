@@ -15,19 +15,19 @@ type TransactionService interface {
 	CreateTransaction(ctx context.Context, params service.InputTransactionParams) (*models.Transaction, error)
 }
 
-type UserService interface {
-	GetUserByID(ctx context.Context, id int) (service.User, error)
+type BalanceService interface {
+	CheckBalanceByUserID(ctx context.Context, userId int64) error
 }
 
 type TransactionHandler struct {
 	transactionService TransactionService
-	userService        UserService
+	balanceService     BalanceService
 }
 
-func NewTransactionHandler(transactionSer TransactionService, userServ UserService) TransactionHandler {
+func NewTransactionHandler(transactionServ TransactionService, balanceServ BalanceService) TransactionHandler {
 	return TransactionHandler{
-		transactionService: transactionSer,
-		userService:        userServ,
+		transactionService: transactionServ,
+		balanceService:     balanceServ,
 	}
 }
 
@@ -40,8 +40,9 @@ func (t *TransactionHandler) TransactionCreatePOST(rw http.ResponseWriter, r *ht
 	ctx := r.Context()
 	headerUserId := r.Header.Get(headerUser)
 	headerToken := r.Header.Get(headerTokenIdempodency)
-	headeruserIdInt, _ := strconv.Atoi(headerUserId)
-	user, err := t.userService.GetUserByID(ctx, headeruserIdInt)
+	userId, _ := strconv.ParseInt(headerUserId, 10, 64)
+
+	err := t.balanceService.CheckBalanceByUserID(ctx, userId)
 	if errors.Is(err, service.ErrUserNotFound) {
 		rw.WriteHeader(http.StatusNotFound)
 		writeErr(ctx, rw, err)
@@ -60,7 +61,7 @@ func (t *TransactionHandler) TransactionCreatePOST(rw http.ResponseWriter, r *ht
 		ctx,
 		service.InputTransactionParams{
 			Amount: params.Amount,
-			UserId: user.Id,
+			UserId: userId,
 			Token:  headerToken,
 		},
 	)
@@ -70,6 +71,19 @@ func (t *TransactionHandler) TransactionCreatePOST(rw http.ResponseWriter, r *ht
 		return
 	}
 
+	bytesResp, err := resp.MarshalBinary()
+	if err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		writeErr(ctx, rw, errAPIUnknown)
+		return
+	}
+
+	rw.WriteHeader(http.StatusCreated)
+	_, err = rw.Write(bytesResp)
+	if err != nil {
+		logger.Error("TransactionCreatePOST: err = " + err.Error())
+		return
+	}
 }
 
 func parseTransactionPOSTParams(ctx context.Context, rw http.ResponseWriter, r *http.Request) (*models.TransactionParamsBody, error) {

@@ -17,8 +17,8 @@ import (
 // swagger:model TransactionReverseBody
 type TransactionReverseBody struct {
 
-	// pay id
-	PayID int64 `json:"pay_id,omitempty"`
+	// id
+	ID int64 `json:"id,omitempty"`
 }
 
 // Validate validates this transaction reverse body

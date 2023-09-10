@@ -109,6 +109,6 @@ definitions:
   TransactionReverseBody:
     type: object
     properties:
-      pay_id:
+      id:
         type: integer
 

@@ -20,7 +20,7 @@ func NewHandler(services *service.Services) *Handler {
 func (h *Handler) InitRouter() http.Handler {
 	r := mux.NewRouter()
 
-	transactionHandler := v1.NewTransactionHandler(h.services.TransactionService, h.services.UserService)
+	transactionHandler := v1.NewTransactionHandler(h.services.TransactionService, h.services.BalanceService)
 	r.Handle("/v1/transaction/create", http.HandlerFunc(transactionHandler.TransactionCreatePOST)).Methods(http.MethodPost)
 	return r
 }

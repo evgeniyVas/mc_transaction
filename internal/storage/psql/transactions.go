@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	"strings"
 	"time"
 )
 
@@ -90,18 +91,18 @@ type UpdateTransactionParams struct {
 
 func (t *TransactionStorage) UpdateTransactionTurnOffLocked(ctx context.Context, p UpdateTransactionParams) error {
 	var (
-		querySetFields string
+		querySetString strings.Builder
 		queryParams    []interface{}
 	)
 
-	if p.Status == "" {
-		querySetFields = "locked = false"
-	} else {
-		querySetFields = "locked = false, status = ?"
+	querySetString.WriteString("locked = ?")
+	queryParams = append(queryParams, p.Locked)
+	if p.Status != "" {
+		querySetString.WriteString(", status = ?")
 		queryParams = append(queryParams, p.Status)
 	}
 	queryParams = append(queryParams, p.ID)
-	query := fmt.Sprintf("UPDATE transactions SET %s WHERE id = ?", querySetFields)
+	query := fmt.Sprintf("UPDATE transactions SET %s WHERE id = ?", querySetString.String())
 
 	_, err := t.conn.ExecContext(ctx, t.conn.Rebind(query), queryParams)
 	if err != nil {

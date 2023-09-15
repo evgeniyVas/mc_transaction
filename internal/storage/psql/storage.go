@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	"github.com/mc_transaction/internal/logger"
 	"log"
 	"time"
 
@@ -11,9 +12,8 @@ import (
 )
 
 type Storages struct {
-	Transaction *TransactionStorage
-	User        *UserStorage
-	Balance     *BalanceStorage
+	TransactionStorage *TransactionStorage
+	BalanceStorage     *BalanceStorage
 }
 
 func New(dsn string, timeout time.Duration) (*Storages, error) {
@@ -23,18 +23,31 @@ func New(dsn string, timeout time.Duration) (*Storages, error) {
 	}
 
 	return &Storages{
-		Transaction: NewTransactionStorage(conn),
-		User:        NewUserStorage(conn),
-		Balance:     NewBalanceStorage(conn),
+		TransactionStorage: NewTransactionStorage(conn),
+		BalanceStorage:     NewBalanceStorage(conn),
 	}, nil
 }
 
 func (s *Storages) Close() error {
-	err := s.Transaction.conn.Close()
+	err := s.TransactionStorage.conn.Close()
+	if err != nil {
+		return err
+	}
+	err = s.BalanceStorage.conn.Close()
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func rollBackTx(tx *sqlx.Tx, err error) {
+	if err != nil {
+		if tx == nil {
+			logger.Error(fmt.Errorf("tx error: %w", err).Error())
+		} else if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			logger.Error(fmt.Errorf("rollback error: %w", err).Error())
+		}
+	}
 }
 
 func Connection(dsn string, timeout time.Duration) (*sqlx.DB, error) {

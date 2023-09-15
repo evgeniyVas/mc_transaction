@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type TransactionService interface {
@@ -38,21 +39,21 @@ const headerTokenIdempodency = "X-Idempodency-Token"
 
 func (t *TransactionHandler) TransactionCreatePOST(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	headerUserId := r.Header.Get(headerUser)
-	headerToken := r.Header.Get(headerTokenIdempodency)
+	headerUserId := strings.TrimSpace(r.Header.Get(headerUser))
+	headerToken := strings.TrimSpace(r.Header.Get(headerTokenIdempodency))
 	userId, _ := strconv.ParseInt(headerUserId, 10, 64)
 
 	err := t.balanceService.CheckBalanceByUserID(ctx, userId)
-	if errors.Is(err, service.ErrUserNotFound) {
+	if errors.Is(err, service.ErrBalanceNotFound) {
 		rw.WriteHeader(http.StatusNotFound)
-		writeErr(ctx, rw, err)
+		writeErr(rw, err)
 		return
 	} else if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
-		writeErr(ctx, rw, errAPIUnknown)
+		writeErr(rw, errAPIUnknown)
 		return
 	}
-	params, err := parseTransactionPOSTParams(ctx, rw, r)
+	params, err := parseTransactionPOSTParams(rw, r)
 	if err != nil {
 		return
 	}
@@ -67,14 +68,14 @@ func (t *TransactionHandler) TransactionCreatePOST(rw http.ResponseWriter, r *ht
 	)
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
-		writeErr(ctx, rw, errAPIUnknown)
+		writeErr(rw, errAPIUnknown)
 		return
 	}
 
 	bytesResp, err := resp.MarshalBinary()
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
-		writeErr(ctx, rw, errAPIUnknown)
+		writeErr(rw, errAPIUnknown)
 		return
 	}
 
@@ -86,7 +87,7 @@ func (t *TransactionHandler) TransactionCreatePOST(rw http.ResponseWriter, r *ht
 	}
 }
 
-func parseTransactionPOSTParams(ctx context.Context, rw http.ResponseWriter, r *http.Request) (*models.TransactionParamsBody, error) {
+func parseTransactionPOSTParams(rw http.ResponseWriter, r *http.Request) (*models.TransactionParamsBody, error) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
@@ -105,7 +106,7 @@ func parseTransactionPOSTParams(ctx context.Context, rw http.ResponseWriter, r *
 	return input, nil
 }
 
-func writeErr(ctx context.Context, rw io.Writer, err error) {
+func writeErr(rw io.Writer, err error) {
 	errM := &models.Error{Message: err.Error()}
 	b, _ := errM.MarshalBinary()
 	_, err = rw.Write(b)

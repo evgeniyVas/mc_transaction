@@ -8,8 +8,6 @@ import (
 type Services struct {
 	BalanceService     *BalanceService
 	TransactionService *TransactionService
-	UserService        *UserService
-	PayPlatfromService *PayPlatformService
 }
 
 type Deps struct {
@@ -19,8 +17,7 @@ type Deps struct {
 
 func NewServices(deps *Deps) *Services {
 	return &Services{
-		BalanceService:     NewBalance(deps.Storage.Balance),
-		TransactionService: NewTransaction(deps.Storage.Transaction, deps.PayPlatformClient),
-		UserService:        NewUser(deps.Storage.User),
+		BalanceService:     NewBalanceService(deps.Storage.BalanceStorage),
+		TransactionService: NewTransactionService(deps.Storage.TransactionStorage, deps.PayPlatformClient),
 	}
 }

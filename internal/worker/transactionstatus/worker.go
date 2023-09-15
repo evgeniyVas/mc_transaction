@@ -2,17 +2,20 @@ package transactionstatus
 
 import (
 	"context"
+	"errors"
+	"github.com/mc_transaction/internal/logger"
+	storage "github.com/mc_transaction/internal/storage/psql"
 	"github.com/mc_transaction/pkg/worker"
 	"time"
 )
 
 type TransactionStorage interface {
-	SelectTransactionWithLock(ctx context.Context) (int64, error)
-	UpdateTransactionStatus(ctx context.Context) error
+	SelectTransactionWithLock(ctx context.Context) (*storage.Transaction, error)
+	UpdateTransactionTurnOffLocked(ctx context.Context, params storage.UpdateTransactionParams) error
 }
 
 type BalanceStorage interface {
-	UpdateBalanceWithTurnLockedTransaction(ctx context.Context) error
+	UpdateBalance(ctx context.Context, fields storage.UpdateBalanceParams) error
 }
 
 type PayPlatformClient interface {
@@ -22,7 +25,7 @@ type PayPlatformClient interface {
 
 type Cfg struct {
 	Period         time.Duration `default:"2s"`
-	Count          int           `default:"100"`
+	Count          int           `default:"40"`
 	LockedDuration time.Duration `default:"60s"`
 }
 
@@ -47,22 +50,75 @@ func NewTransactionWorker(cfg Cfg, pClient PayPlatformClient, tStorage Transacti
 	return &transactionW
 }
 
-func (s *TransactionWorker) Start(ctx context.Context) {
-	s.workers.Start(ctx)
+func (t *TransactionWorker) Start(ctx context.Context) {
+	t.workers.Start(ctx)
 }
 
-func (s *TransactionWorker) Close() {
-	s.workers.Close()
+func (t *TransactionWorker) Close() {
+	t.workers.Close()
 }
 
-func (s *TransactionWorker) FuncTrigger() func() {
-	return s.workers.Trigger
+func (t *TransactionWorker) FuncTrigger() func() {
+	return t.workers.Trigger
 }
 
-func (s *TransactionWorker) work(ctx context.Context) {
-	ctx, cancelFunc := context.WithTimeout(ctx, s.cfg.LockedDuration)
-	defer cancelFunc()
+func (t *TransactionWorker) work(ctx context.Context) {
+	const logPrefix = "transactionStatusWorker:"
+	transaction, err := t.tStorage.SelectTransactionWithLock(ctx)
+	tParams := storage.UpdateTransactionParams{
+		ID:     transaction.ID,
+		Locked: false,
+	}
 
-	//logic
-	s.workers.Trigger()
+	if err != nil {
+		if errors.Is(err, storage.ErrTransactionNotFound) {
+			return
+		}
+		logger.Error(logPrefix + " error to select transaction " + err.Error())
+		return
+	}
+	defer func() {
+		err = t.tStorage.UpdateTransactionTurnOffLocked(ctx, tParams)
+		if err != nil {
+			logger.Error(logPrefix + " error update transaction - " + err.Error())
+		}
+	}()
+
+	status, err := t.pClient.GetTransactionStatusById(ctx, transaction.PayId)
+	if err != nil {
+		logger.Error(logPrefix + " error payplatform get status endpoint - " + err.Error())
+		return
+	}
+
+	if status == "CREATED" {
+		timeToReverse := time.Now().Add(time.Duration(-15) * time.Minute)
+		if timeToReverse.Sub(transaction.CreatedAt) > 0 {
+			err := t.pClient.ReverseTransaction(ctx, transaction.PayId)
+			if err != nil {
+				logger.Error(logPrefix + " error payplatform reverse endpoint - " + err.Error())
+				return
+			}
+			tParams.Status = "reverse"
+		}
+	} else if status == "SUCCESS" {
+		err := t.bStorage.UpdateBalance(ctx, storage.UpdateBalanceParams{
+			UserID:    transaction.UserId,
+			Amount:    transaction.Amount,
+			UpdatedAt: time.Now(),
+		})
+		if err != nil {
+			logger.Error(logPrefix + " error update balance - " + err.Error())
+			return
+		}
+		tParams.Status = "success"
+	} else if status == "NEED_TO_REVERSE" {
+		err := t.pClient.ReverseTransaction(ctx, transaction.PayId)
+		if err != nil {
+			logger.Error(logPrefix + " error payplatform reverse endpoint - " + err.Error())
+			return
+		}
+		tParams.Status = "reverse"
+	}
+
+	t.workers.Trigger()
 }

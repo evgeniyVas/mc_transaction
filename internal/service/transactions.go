@@ -5,19 +5,16 @@ import (
 	"fmt"
 	paymodels "github.com/mc_transaction/internal/http_client/paysystem/models"
 	"github.com/mc_transaction/internal/models"
-	"github.com/mc_transaction/internal/storage/psql"
+	storage "github.com/mc_transaction/internal/storage/psql"
 	"time"
 )
 
 type TransactionStorage interface {
-	CreateTransaction(ctx context.Context, fields *psql.InsertTransactionParams) (int64, error)
+	CreateTransaction(ctx context.Context, fields *storage.InsertTransactionParams) error
 }
 
 type PayPlatformClient interface {
 	CreateTransaction(ctx context.Context, amount float64) (*paymodels.TransactionCreateResp, error)
-}
-
-type TransactionWorker interface {
 }
 
 type TransactionService struct {
@@ -25,7 +22,7 @@ type TransactionService struct {
 	payPlatform PayPlatformClient
 }
 
-func NewTransaction(storage TransactionStorage, payService PayPlatformClient) *TransactionService {
+func NewTransactionService(storage TransactionStorage, payService PayPlatformClient) *TransactionService {
 	return &TransactionService{
 		storage:     storage,
 		payPlatform: payService,
@@ -46,7 +43,7 @@ func (t *TransactionService) CreateTransaction(ctx context.Context, params Input
 	}
 
 	//save transaction in db
-	_, err = t.storage.CreateTransaction(ctx, &psql.InsertTransactionParams{
+	err = t.storage.CreateTransaction(ctx, &storage.InsertTransactionParams{
 		Amount:    params.Amount,
 		UserId:    params.UserId,
 		Status:    "CREATED",

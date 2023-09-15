@@ -17,36 +17,15 @@ func NewBalanceStorage(conn *sqlx.DB) *BalanceStorage {
 	return &BalanceStorage{conn: conn}
 }
 
-//type InsertBalanceParams struct {
-//	Amount    float64
-//	UserId    int
-//	CreatedAt time.Time
-//	UpdatedAt time.Time
-//}
-//
-//func (s *BalanceStorage) CreateBalance(ctx context.Context, fields *InsertBalanceParams) int64 {
-//	return 123
-//}
-
-type UpdateBalanceParams struct {
-	Amount    float64
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}
-
-func (b *BalanceStorage) UpdateBalance(ctx context.Context, fields *UpdateBalanceParams) int64 {
-	return 123
-}
-
 var ErrBalanceNotFound = errors.New("balance not found")
 
 type SelectBalanceParams struct {
 	UserId int64
 }
 
-func (b *BalanceStorage) GetBalanceByUserID(ctx context.Context, fields *SelectBalanceParams) error {
+func (b *BalanceStorage) GetBalanceByUserID(ctx context.Context, userID int64) error {
 	var res int64
-	err := b.conn.GetContext(ctx, &res, "SELECT 1 FROM balance WHERE user_id=?", fields.UserId)
+	err := b.conn.GetContext(ctx, &res, "SELECT 1 FROM balance WHERE user_id=?", userID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("select error %w", ErrBalanceNotFound)
 	} else if err != nil {
@@ -56,6 +35,17 @@ func (b *BalanceStorage) GetBalanceByUserID(ctx context.Context, fields *SelectB
 	return nil
 }
 
-func (b *BalanceStorage) UpdateBalanceWithTurnLockedTransaction(ctx context.Context) error {
+type UpdateBalanceParams struct {
+	UserID    int64
+	Amount    float64
+	UpdatedAt time.Time
+}
+
+func (b *BalanceStorage) UpdateBalance(ctx context.Context, p UpdateBalanceParams) error {
+	_, err := b.conn.ExecContext(ctx, queryUpdateBalance, p.Amount, p.UserID)
+	if err != nil {
+		return fmt.Errorf("exec error %w", err)
+	}
+
 	return nil
 }

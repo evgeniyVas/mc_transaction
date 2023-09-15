@@ -44,8 +44,8 @@ func main() {
 	transactionWorker := transactionstatus.NewTransactionWorker(
 		cfg.TransactionStatusWorker,
 		payPlatformClient,
-		storages.Transaction,
-		storages.Balance,
+		storages.TransactionStorage,
+		storages.BalanceStorage,
 	)
 	transactionWorker.Start(context.Background())
 	defer transactionWorker.Close()

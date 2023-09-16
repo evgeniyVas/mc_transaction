@@ -61,7 +61,7 @@ func (t *TransactionStorage) SelectTransactionWithLock(ctx context.Context) (*Tr
 	}
 
 	res := &Transaction{}
-	err = tx.GetContext(ctx, &res, querySelectTransactionWithLock)
+	err = tx.GetContext(ctx, res, querySelectTransactionWithLock)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = tx.Commit()
 		return nil, ErrTransactionNotFound

@@ -25,7 +25,7 @@ type SelectBalanceParams struct {
 
 func (b *BalanceStorage) GetBalanceByUserID(ctx context.Context, userID int64) error {
 	var res int64
-	err := b.conn.GetContext(ctx, &res, "SELECT 1 FROM balance WHERE user_id=?", userID)
+	err := b.conn.GetContext(ctx, &res, "SELECT 1 FROM balance WHERE user_id=$1", userID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("select error %w", ErrBalanceNotFound)
 	} else if err != nil {

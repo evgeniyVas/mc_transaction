@@ -14,14 +14,14 @@ type Config struct {
 }
 
 type HttpServer struct {
-	Port         string
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
+	Port         string        `default:"8085"`
+	ReadTimeout  time.Duration `default:"6s"`
+	WriteTimeout time.Duration `default:"6s"`
 }
 
 type Postgres struct {
-	Dsn         string
-	PingTimeout time.Duration
+	Dsn         string        `default:"host=0.0.0.0 user=postgres password=postgres dbname=transactions sslmode=disable binary_parameters=yes"`
+	PingTimeout time.Duration `default:"60s"`
 }
 
 // NewConfig возвращает ссылку на объект конфигурации.

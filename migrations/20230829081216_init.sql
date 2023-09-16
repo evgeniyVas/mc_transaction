@@ -16,9 +16,6 @@ CREATE TABLE IF NOT EXISTS transactions
 
     primary key (id)
 );
-ALTER TABLE
-    transactions
-    OWNER TO user123;
 
 -- balance
 CREATE TABLE IF NOT EXISTS balance
@@ -29,9 +26,6 @@ CREATE TABLE IF NOT EXISTS balance
 
     primary key (id)
 );
-ALTER TABLE
-    balance
-    OWNER TO user123;
 
 -- +goose StatementEnd
 

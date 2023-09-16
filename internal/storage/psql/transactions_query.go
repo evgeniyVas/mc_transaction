@@ -11,7 +11,7 @@ RETURNING id;
 const querySelectTransactionWithLock = `
 SELECT id, pay_id, amount, user_id, created_at
 FROM transactions
-WHERE status=created AND locked=false
+WHERE status='created' AND locked=false
 FOR UPDATE SKIP LOCKED LIMIT 1;
 `
 

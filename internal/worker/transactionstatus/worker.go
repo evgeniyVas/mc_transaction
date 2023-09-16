@@ -65,17 +65,16 @@ func (t *TransactionWorker) FuncTrigger() func() {
 func (t *TransactionWorker) work(ctx context.Context) {
 	const logPrefix = "transactionStatusWorker:"
 	transaction, err := t.tStorage.SelectTransactionWithLock(ctx)
-	tParams := storage.UpdateTransactionParams{
-		ID:     transaction.ID,
-		Locked: false,
-	}
-
 	if err != nil {
 		if errors.Is(err, storage.ErrTransactionNotFound) {
 			return
 		}
 		logger.Error(logPrefix + " error to select transaction " + err.Error())
 		return
+	}
+	tParams := storage.UpdateTransactionParams{
+		ID:     transaction.ID,
+		Locked: false,
 	}
 	defer func() {
 		err = t.tStorage.UpdateTransactionTurnOffLocked(ctx, tParams)

@@ -1,0 +1,114 @@
+swagger: "2.0"
+info:
+  title: Example
+  version: 0.0.1
+schemes:
+  - http
+basePath: /
+consumes:
+  - application/json
+produces:
+  - application/json
+
+paths:
+  /api/transactions/{id}/status:
+    get:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          type: integer
+      responses:
+        '200':
+          description: ОК
+          schema:
+            $ref: '#/definitions/TransactionStatus'
+        '400':
+          description: Ошибка клиента
+        '500':
+          description: Internal error
+          schema:
+            $ref: '#/definitions/Error'
+  /api/transactions:
+    post:
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: '#/definitions/TransactionCreateBody'
+      responses:
+        '200':
+          description: ОК
+          schema:
+            $ref: '#/definitions/TransactionCreateResp'
+        '400':
+          description: Ошибка клиента
+        '500':
+          description: Internal error
+          schema:
+            $ref: '#/definitions/Error'
+
+  /api/transactions/reverse:
+    post:
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: '#/definitions/TransactionReverseBody'
+      responses:
+        '200':
+          description: ОК
+        '400':
+          description: Ошибка клиента
+        '500':
+          description: Internal error
+          schema:
+            $ref: '#/definitions/Error'
+
+definitions:
+  Error:
+    type: object
+    required:
+      - message
+      - code
+    description: сообщение об ошибке
+    properties:
+      message:
+        type: string
+        x-nullable: false
+      code:
+        type: integer
+        x-nullable: false
+
+  TransactionParamsBody:
+    type: object
+    properties:
+      amount:
+        type: number
+
+  TransactionStatus:
+    type: object
+    properties:
+      status:
+        type: string
+
+  TransactionCreateResp:
+    type: object
+    properties:
+      pay_id:
+        type: integer
+      pay_url:
+        type: string
+
+  TransactionCreateBody:
+    type: object
+    properties:
+      amount:
+        type: number
+
+  TransactionReverseBody:
+    type: object
+    properties:
+      id:
+        type: integer
+

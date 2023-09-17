@@ -19,18 +19,15 @@ func NewTransactionStorage(conn *sqlx.DB) *TransactionStorage {
 }
 
 type InsertTransactionParams struct {
-	Amount    float64
-	UserId    int64
-	Status    string
-	PayId     int64
-	Locked    bool
-	Token     string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	Amount float64
+	UserId int64
+	Status string
+	PayId  int64
+	Token  string
 }
 
 func (t *TransactionStorage) CreateTransaction(ctx context.Context, p *InsertTransactionParams) error {
-	_, err := t.conn.ExecContext(ctx, queryInsertTransaction, p.UserId, p.Amount, p.Status, p.PayId, p.Locked, p.Token)
+	_, err := t.conn.ExecContext(ctx, queryInsertTransaction, p.UserId, p.Amount, p.Status, p.PayId, p.Token)
 	if err != nil {
 		return fmt.Errorf("CreateTransaction.queryInsertTransaction error: %w", err)
 	}
@@ -48,6 +45,9 @@ type Transaction struct {
 	CreatedAt time.Time `db:"created_at"`
 }
 
+var lockedDelay = "2 minutes"
+var pullingDelay = "30 seconds"
+
 func (t *TransactionStorage) SelectTransactionWithLock(ctx context.Context) (*Transaction, error) {
 	var (
 		tx  *sqlx.Tx
@@ -61,7 +61,7 @@ func (t *TransactionStorage) SelectTransactionWithLock(ctx context.Context) (*Tr
 	}
 
 	res := &Transaction{}
-	err = tx.GetContext(ctx, res, querySelectTransactionWithLock)
+	err = tx.GetContext(ctx, res, querySelectTransactionWithLock, lockedDelay, pullingDelay)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = tx.Commit()
 		return nil, ErrTransactionNotFound
@@ -69,7 +69,7 @@ func (t *TransactionStorage) SelectTransactionWithLock(ctx context.Context) (*Tr
 		return nil, fmt.Errorf("select error %w", err)
 	}
 
-	_, err = tx.ExecContext(ctx, queryUpdateTransactionLocked, res.ID)
+	_, err = tx.ExecContext(ctx, queryUpdateTransactionLock, res.ID)
 	if err != nil {
 		return nil, fmt.Errorf("exec error %w", err)
 	}
@@ -83,10 +83,8 @@ func (t *TransactionStorage) SelectTransactionWithLock(ctx context.Context) (*Tr
 }
 
 type UpdateTransactionParams struct {
-	ID        int64
-	Status    string
-	Locked    bool
-	UpdatedAt time.Time
+	ID     int64
+	Status string
 }
 
 func (t *TransactionStorage) UpdateTransactionTurnOffLocked(ctx context.Context, p UpdateTransactionParams) error {
@@ -95,8 +93,8 @@ func (t *TransactionStorage) UpdateTransactionTurnOffLocked(ctx context.Context,
 		queryParams    []interface{}
 	)
 
-	querySetString.WriteString("locked = ?")
-	queryParams = append(queryParams, p.Locked)
+	querySetString.WriteString("locked_at = null")
+	querySetString.WriteString(", updated_at = now()")
 	if p.Status != "" {
 		querySetString.WriteString(", status = ?")
 		queryParams = append(queryParams, p.Status)
@@ -104,7 +102,7 @@ func (t *TransactionStorage) UpdateTransactionTurnOffLocked(ctx context.Context,
 	queryParams = append(queryParams, p.ID)
 	query := fmt.Sprintf("UPDATE transactions SET %s WHERE id = ?", querySetString.String())
 
-	_, err := t.conn.ExecContext(ctx, t.conn.Rebind(query), queryParams)
+	_, err := t.conn.ExecContext(ctx, t.conn.Rebind(query), queryParams...)
 	if err != nil {
 		return fmt.Errorf("exec error %w", err)
 	}

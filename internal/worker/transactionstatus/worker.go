@@ -15,7 +15,7 @@ type TransactionStorage interface {
 }
 
 type BalanceStorage interface {
-	UpdateBalance(ctx context.Context, fields storage.UpdateBalanceParams) error
+	UpdateBalanceWithUnlockTransaction(ctx context.Context, fields storage.UpdateBalanceParams) error
 }
 
 type PayPlatformClient interface {
@@ -24,9 +24,9 @@ type PayPlatformClient interface {
 }
 
 type Cfg struct {
-	Period         time.Duration `default:"2s"`
-	Count          int           `default:"40"`
-	LockedDuration time.Duration `default:"60s"`
+	Period          time.Duration `default:"2s"`
+	Count           int           `default:"40"`
+	ReverseDuration time.Duration `default:"15m"`
 }
 
 type TransactionWorker struct {
@@ -73,13 +73,16 @@ func (t *TransactionWorker) work(ctx context.Context) {
 		return
 	}
 	tParams := storage.UpdateTransactionParams{
-		ID:     transaction.ID,
-		Locked: false,
+		ID: transaction.ID,
 	}
+
+	useUnlockTrans := true
 	defer func() {
-		err = t.tStorage.UpdateTransactionTurnOffLocked(ctx, tParams)
-		if err != nil {
-			logger.Error(logPrefix + " error update transaction - " + err.Error())
+		if useUnlockTrans {
+			err = t.tStorage.UpdateTransactionTurnOffLocked(ctx, tParams)
+			if err != nil {
+				logger.Error(logPrefix + " error update transaction - " + err.Error())
+			}
 		}
 	}()
 
@@ -90,8 +93,7 @@ func (t *TransactionWorker) work(ctx context.Context) {
 	}
 
 	if status == "CREATED" {
-		timeToReverse := time.Now().Add(time.Duration(-15) * time.Minute)
-		if timeToReverse.Sub(transaction.CreatedAt) > 0 {
+		if time.Now().Sub(transaction.CreatedAt.Add(t.cfg.ReverseDuration)) > 0 {
 			err := t.pClient.ReverseTransaction(ctx, transaction.PayId)
 			if err != nil {
 				logger.Error(logPrefix + " error payplatform reverse endpoint - " + err.Error())
@@ -100,16 +102,17 @@ func (t *TransactionWorker) work(ctx context.Context) {
 			tParams.Status = "reverse"
 		}
 	} else if status == "SUCCESS" {
-		err := t.bStorage.UpdateBalance(ctx, storage.UpdateBalanceParams{
-			UserID:    transaction.UserId,
-			Amount:    transaction.Amount,
-			UpdatedAt: time.Now(),
+		err := t.bStorage.UpdateBalanceWithUnlockTransaction(ctx, storage.UpdateBalanceParams{
+			UserID:            transaction.UserId,
+			Amount:            transaction.Amount,
+			TransactionID:     transaction.ID,
+			TransactionStatus: "success",
 		})
 		if err != nil {
 			logger.Error(logPrefix + " error update balance - " + err.Error())
 			return
 		}
-		tParams.Status = "success"
+		useUnlockTrans = false
 	} else if status == "NEED_TO_REVERSE" {
 		err := t.pClient.ReverseTransaction(ctx, transaction.PayId)
 		if err != nil {

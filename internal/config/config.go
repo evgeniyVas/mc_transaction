@@ -20,7 +20,7 @@ type HttpServer struct {
 }
 
 type Postgres struct {
-	Dsn         string        `default:"host=0.0.0.0 user=postgres password=postgres dbname=transactions sslmode=disable binary_parameters=yes"`
+	Dsn         string        `default:"host=0.0.0.0 port=5429 user=postgres password=postgres dbname=transactions sslmode=disable binary_parameters=yes"`
 	PingTimeout time.Duration `default:"60s"`
 }
 

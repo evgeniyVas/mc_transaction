@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS transactions
     amount     DECIMAL(20, 2)           NOT NULL,
     status     TEXT                     NULL,
     pay_id     INT                      NULL,
-    locked     BOOLEAN                  NULL,
+    locked_at  TIMESTAMP WITH TIME ZONE NULL,
     token      TEXT                     NOT NULL UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -20,9 +20,11 @@ CREATE TABLE IF NOT EXISTS transactions
 -- balance
 CREATE TABLE IF NOT EXISTS balance
 (
-    id      BIGINT         NOT NULL UNIQUE,
-    user_id BIGINT         NOT NULL UNIQUE,
-    amount  DECIMAL(20, 2) NOT NULL,
+    id         BIGINT                   NOT NULL UNIQUE,
+    user_id    BIGINT                   NOT NULL UNIQUE,
+    amount     DECIMAL(20, 2)           NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 
     primary key (id)
 );

@@ -6,7 +6,6 @@ import (
 	paymodels "github.com/mc_transaction/internal/http_client/paysystem/models"
 	"github.com/mc_transaction/internal/models"
 	storage "github.com/mc_transaction/internal/storage/psql"
-	"time"
 )
 
 type TransactionStorage interface {
@@ -44,14 +43,11 @@ func (t *TransactionService) CreateTransaction(ctx context.Context, params Input
 
 	//save transaction in db
 	err = t.storage.CreateTransaction(ctx, &storage.InsertTransactionParams{
-		Amount:    params.Amount,
-		UserId:    params.UserId,
-		Status:    "CREATED",
-		PayId:     resp.PayID,
-		Locked:    false,
-		Token:     params.Token,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		Amount: params.Amount,
+		UserId: params.UserId,
+		Status: "CREATED",
+		PayId:  resp.PayID,
+		Token:  params.Token,
 	})
 	if err != nil {
 		return nil, err

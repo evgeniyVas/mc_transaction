@@ -5,8 +5,8 @@ services:
     image: postgres:11.12-alpine3.14
     restart: unless-stopped
     environment:
-      - POSTGRES_PASSWORD=transactions
-      - POSTGRES_USER=user123
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
       - POSTGRES_DB=transactions
     ports:
       - '5429:5432'

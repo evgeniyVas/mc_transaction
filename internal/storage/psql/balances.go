@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jmoiron/sqlx"
-	"time"
 )
 
 type BalanceStorage struct {
@@ -36,15 +35,37 @@ func (b *BalanceStorage) GetBalanceByUserID(ctx context.Context, userID int64) e
 }
 
 type UpdateBalanceParams struct {
-	UserID    int64
-	Amount    float64
-	UpdatedAt time.Time
+	UserID            int64
+	Amount            float64
+	TransactionID     int64
+	TransactionStatus string
 }
 
-func (b *BalanceStorage) UpdateBalance(ctx context.Context, p UpdateBalanceParams) error {
-	_, err := b.conn.ExecContext(ctx, queryUpdateBalance, p.Amount, p.UserID)
+func (b *BalanceStorage) UpdateBalanceWithUnlockTransaction(ctx context.Context, p UpdateBalanceParams) error {
+	var (
+		tx  *sqlx.Tx
+		err error
+	)
+	defer rollBackTx(tx, err)
+
+	tx, err = b.conn.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("tx begin error: %w", err)
+	}
+
+	_, err = tx.ExecContext(ctx, queryUpdateBalance, p.Amount, p.UserID)
 	if err != nil {
 		return fmt.Errorf("exec error %w", err)
+	}
+
+	_, err = tx.ExecContext(ctx, queryUpdateTransactionUnlock, p.TransactionStatus, p.TransactionID)
+	if err != nil {
+		return fmt.Errorf("exec error %w", err)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("commit error %w", err)
 	}
 
 	return nil
